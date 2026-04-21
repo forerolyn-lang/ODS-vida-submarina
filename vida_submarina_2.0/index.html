@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>OceanLearn - Vida Marina</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root {
+  --ocean-deep: #0a1628;
+  --ocean-mid: #0d2137;
+  --ocean-light: #0e3a5c;
+  --teal: #0099cc;
+  --teal-bright: #00c8e6;
+  --teal-glow: rgba(0,200,230,0.18);
+  --coral: #ff6b6b;
+  --gold: #ffd166;
+  --glass-bg: rgba(255,255,255,0.06);
+  --glass-border: rgba(255,255,255,0.13);
+  --text-main: #e8f4fc;
+  --text-muted: #7eb3cc;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --nav-h: 68px;
+  --header-h: 60px;
+  --danger: #ff6b6b;
+  --warning: #ffd166;
+  --success: #06d6a0;
+}
+[data-theme="light"] {
+  --ocean-deep: #e8f4fc;
+  --ocean-mid: #d0eaf8;
+  --ocean-light: #b8dff5;
+  --glass-bg: rgba(255,255,255,0.55);
+  --glass-border: rgba(0,120,180,0.18);
+  --text-main: #0a1628;
+  --text-muted: #1a5a7a;
+  --teal-glow: rgba(0,153,204,0.10);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;font-family:'Lexend',sans-serif;background:var(--ocean-deep);color:var(--text-main);overflow:hidden;}
+
+/* Ocean BG */
+.ocean-bg{
+  position:fixed;inset:0;z-index:0;
+  background:linear-gradient(160deg,var(--ocean-deep) 0%,var(--ocean-mid) 50%,var(--ocean-light) 100%);
+  pointer-events:none;
+}
+.ocean-bg::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 80% 60% at 60% 30%, rgba(0,153,204,0.18) 0%, transparent 70%),
+             radial-gradient(ellipse 60% 40% at 20% 80%, rgba(0,60,100,0.4) 0%, transparent 60%);
+}
+.ocean-bg::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:220px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 220'%3E%3Cpath fill='rgba(0,153,204,0.07)' d='M0,100 C360,200 720,0 1440,120 L1440,220 L0,220Z'/%3E%3Cpath fill='rgba(0,100,150,0.06)' d='M0,140 C400,60 900,200 1440,80 L1440,220 L0,220Z'/%3E%3C/svg%3E") bottom/cover no-repeat;
+  pointer-events:none;
+}
+/* Glass */
+.glass{
+  background:var(--glass-bg);
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+}
+/* Screens */
+.screen{position:fixed;inset:0;z-index:1;display:none;flex-direction:column;}
+.screen.active{display:flex;}
+/* Scrollable content */
+.scroll-area{flex:1;overflow-y:auto;padding:16px;padding-bottom:calc(var(--nav-h) + 16px);}
+.scroll-area.with-header{padding-top:calc(var(--header-h) + 16px);}
+.scroll-area::-webkit-scrollbar{width:4px;}
+.scroll-area::-webkit-scrollbar-track{background:transparent;}
+.scroll-area::-webkit-scrollbar-thumb{background:var(--teal);border-radius:4px;}
+
+/* Header */
+.app-header{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  height:var(--header-h);display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;border-bottom:1px solid var(--glass-border);
+}
+.header-title{font-size:18px;font-weight:600;color:var(--text-main);}
+.icon-btn{
+  width:40px;height:40px;border:none;background:transparent;cursor:pointer;
+  color:var(--text-main);display:flex;align-items:center;justify-content:center;
+  border-radius:50%;transition:background .2s;
+}
+.icon-btn:hover{background:var(--teal-glow);}
+.notif-badge{
+  position:relative;
+}
+.notif-badge::after{
+  content:'3';position:absolute;top:-2px;right:-2px;
+  background:var(--coral);color:#fff;font-size:9px;font-weight:700;
+  width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  line-height:16px;text-align:center;
+}
+
+/* Bottom Nav */
+.bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:100;
+  height:var(--nav-h);display:flex;align-items:center;
+  border-top:1px solid var(--glass-border);
+}
+.nav-btn{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+  background:none;border:none;cursor:pointer;color:var(--text-muted);
+  font-family:'Lexend',sans-serif;font-size:11px;padding:8px 0;transition:color .2s;
+}
+.nav-btn.active,.nav-btn:hover{color:var(--teal-bright);}
+.nav-btn svg{width:22px;height:22px;}
+
+/* Theme toggle */
+.theme-btn{
+  position:fixed;top:14px;right:16px;z-index:200;
+  width:38px;height:38px;border-radius:50%;border:1px solid var(--glass-border);
+  background:var(--glass-bg);backdrop-filter:blur(10px);
+  cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;
+  transition:transform .2s;
+}
+.theme-btn:hover{transform:rotate(20deg);}
+
+/* ===== HOME SCREEN ===== */
+#home-screen .scroll-area{display:flex;align-items:center;justify-content:center;min-height:100vh;padding-bottom:30px;}
+.home-content{text-align:center;max-width:400px;width:100%;padding:20px;}
+.logo-wrap{margin-bottom:20px;}
+.logo-wrap svg{filter:drop-shadow(0 0 20px rgba(0,200,230,0.5));}
+.welcome-title{font-size:36px;font-weight:700;letter-spacing:-1px;background:linear-gradient(135deg,var(--teal-bright),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px;}
+.welcome-sub{font-size:15px;color:var(--text-muted);margin-bottom:32px;}
+.features-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px;}
+.feat-card{
+  padding:18px 12px;border-radius:var(--radius);text-align:center;
+  transition:transform .2s;
+}
+.feat-card:hover{transform:translateY(-3px);}
+.feat-icon{font-size:28px;margin-bottom:8px;}
+.feat-card h3{font-size:13px;font-weight:600;margin-bottom:4px;}
+.feat-card p{font-size:11px;color:var(--text-muted);line-height:1.4;}
+
+/* ===== AUTH SCREEN ===== */
+#auth-screen .scroll-area{display:flex;align-items:center;justify-content:center;min-height:100vh;padding-bottom:30px;}
+.auth-box{width:100%;max-width:380px;padding:20px;}
+.auth-tabs{display:flex;gap:8px;margin-bottom:20px;padding:4px;border-radius:var(--radius);background:rgba(0,0,0,0.2);}
+.auth-tab{
+  flex:1;padding:10px;border:none;border-radius:var(--radius-sm);
+  background:transparent;color:var(--text-muted);cursor:pointer;
+  font-family:'Lexend',sans-serif;font-size:14px;font-weight:500;transition:all .2s;
+}
+.auth-tab.active{background:var(--teal);color:#fff;}
+.auth-form{display:none;}
+.auth-form.active{display:block;}
+.back-btn{
+  display:inline-flex;align-items:center;gap:6px;border:none;background:none;
+  color:var(--text-muted);cursor:pointer;font-family:'Lexend',sans-serif;
+  font-size:14px;margin-bottom:20px;padding:6px 0;transition:color .2s;
+}
+.back-btn:hover{color:var(--teal-bright);}
+
+/* Form elements */
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-size:13px;font-weight:500;color:var(--text-muted);margin-bottom:6px;}
+.form-input{
+  width:100%;padding:12px 14px;border-radius:var(--radius-sm);
+  border:1px solid var(--glass-border);background:rgba(0,0,0,0.2);
+  color:var(--text-main);font-family:'Lexend',sans-serif;font-size:14px;
+  outline:none;transition:border-color .2s;
+}
+.form-input:focus{border-color:var(--teal);}
+.form-input option{background:#0d2137;color:#e8f4fc;}
+textarea.form-input{resize:vertical;min-height:90px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-section{border-radius:var(--radius);padding:18px;margin-bottom:14px;}
+.form-section-title{font-size:15px;font-weight:600;margin-bottom:14px;color:var(--teal-bright);}
+.file-input{
+  width:100%;padding:12px;border-radius:var(--radius-sm);
+  border:1px dashed var(--glass-border);background:rgba(0,0,0,0.15);
+  color:var(--text-muted);font-size:13px;cursor:pointer;
+}
+.form-actions{display:flex;gap:12px;margin-top:4px;padding-bottom:8px;}
+
+/* Buttons */
+.btn-primary{
+  width:100%;padding:14px;border:none;border-radius:var(--radius-sm);
+  background:linear-gradient(135deg,var(--teal),var(--teal-bright));
+  color:#fff;font-family:'Lexend',sans-serif;font-size:15px;font-weight:600;
+  cursor:pointer;transition:opacity .2s,transform .1s;margin-top:8px;
+}
+.btn-primary:hover{opacity:.9;}
+.btn-primary:active{transform:scale(.98);}
+.btn-secondary{
+  width:100%;padding:13px;border:1px solid var(--teal);border-radius:var(--radius-sm);
+  background:transparent;color:var(--teal-bright);font-family:'Lexend',sans-serif;
+  font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px;
+}
+.btn-secondary:hover{background:var(--teal-glow);}
+.btn-icon{display:flex;align-items:center;gap:8px;justify-content:center;}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}
+.stat-card{padding:16px;border-radius:var(--radius);display:flex;align-items:center;gap:12px;}
+.stat-emoji{font-size:28px;}
+.stat-val{font-size:22px;font-weight:700;color:var(--teal-bright);}
+.stat-lbl{font-size:11px;color:var(--text-muted);}
+
+/* Section header */
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin:20px 0 12px;}
+.sec-header h2{font-size:16px;font-weight:600;}
+.sec-header a{font-size:12px;color:var(--teal);text-decoration:none;}
+
+/* Activity */
+.activity-item{
+  display:flex;align-items:flex-start;gap:12px;padding:14px;
+  border-radius:var(--radius);margin-bottom:10px;
+}
+.activity-emoji{font-size:24px;flex-shrink:0;}
+.activity-item h3{font-size:14px;font-weight:600;margin-bottom:3px;}
+.activity-item p{font-size:12px;color:var(--text-muted);}
+.activity-time{font-size:11px;color:var(--teal);display:block;margin-top:4px;}
+
+/* Quick actions */
+.quick-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;}
+.quick-btn{
+  padding:16px 8px;border:none;border-radius:var(--radius);
+  background:var(--glass-bg);border:1px solid var(--glass-border);
+  color:var(--text-main);cursor:pointer;text-align:center;
+  font-family:'Lexend',sans-serif;font-size:11px;transition:transform .2s,background .2s;
+}
+.quick-btn:hover{transform:translateY(-2px);background:var(--teal-glow);}
+.quick-emoji{font-size:22px;display:block;margin-bottom:6px;}
+
+/* ===== MAP ===== */
+.map-container{position:relative;border-radius:var(--radius);overflow:hidden;margin-bottom:16px;}
+#observation-map{height:260px;width:100%;border-radius:var(--radius);z-index:10;}
+.map-label{
+  position:absolute;top:10px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,0.65);backdrop-filter:blur(8px);
+  color:#fff;font-size:12px;padding:6px 14px;border-radius:20px;
+  pointer-events:none;z-index:20;white-space:nowrap;
+}
+.map-coords{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;
+}
+.coord-display{
+  padding:10px 12px;border-radius:var(--radius-sm);
+  background:rgba(0,0,0,0.2);border:1px solid var(--glass-border);
+}
+.coord-display label{font-size:11px;color:var(--text-muted);display:block;margin-bottom:3px;}
+.coord-display span{font-size:14px;font-weight:500;color:var(--teal-bright);}
+
+/* ===== MANAGEMENT ===== */
+.mgmt-tabs{display:flex;gap:8px;padding:4px;border-radius:var(--radius);background:rgba(0,0,0,0.2);margin-bottom:16px;}
+.tab-btn{
+  flex:1;padding:10px 8px;border:none;border-radius:var(--radius-sm);
+  background:transparent;color:var(--text-muted);cursor:pointer;
+  font-family:'Lexend',sans-serif;font-size:13px;font-weight:500;transition:all .2s;
+}
+.tab-btn.active{background:var(--teal);color:#fff;}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+.search-bar{
+  display:flex;align-items:center;gap:10px;padding:10px 14px;
+  border-radius:var(--radius-sm);margin-bottom:12px;
+}
+.search-input{
+  flex:1;background:none;border:none;outline:none;
+  color:var(--text-main);font-family:'Lexend',sans-serif;font-size:14px;
+}
+.search-input::placeholder{color:var(--text-muted);}
+.data-item{
+  display:flex;align-items:center;gap:12px;padding:14px;
+  border-radius:var(--radius);margin-bottom:10px;
+}
+.data-emoji{font-size:26px;flex-shrink:0;}
+.data-info{flex:1;}
+.data-info h3{font-size:14px;font-weight:600;margin-bottom:3px;}
+.data-info p{font-size:12px;color:var(--text-muted);}
+.status-pill{
+  display:inline-block;font-size:10px;font-weight:600;
+  padding:3px 9px;border-radius:20px;margin-top:5px;
+}
+.pill-green{background:rgba(6,214,160,.18);color:var(--success);}
+.pill-red{background:rgba(255,107,107,.18);color:var(--danger);}
+.pill-yellow{background:rgba(255,209,102,.18);color:var(--warning);}
+.edit-btn{
+  width:36px;height:36px;border:1px solid var(--glass-border);background:var(--glass-bg);
+  border-radius:var(--radius-sm);cursor:pointer;color:var(--text-muted);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:color .2s;
+}
+.edit-btn:hover{color:var(--teal-bright);}
+.user-avatar{
+  width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-bright));
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;
+}
+
+/* ===== REPORTS ===== */
+.filter-bar{display:flex;align-items:center;padding:6px;border-radius:var(--radius-sm);margin-bottom:16px;}
+.filter-select{
+  flex:1;background:none;border:none;outline:none;
+  color:var(--text-main);font-family:'Lexend',sans-serif;font-size:14px;cursor:pointer;
+  padding:6px 10px;
+}
+.filter-select option{background:#0d2137;}
+.chart-wrap{padding:16px;border-radius:var(--radius);margin-bottom:16px;}
+.chart-wrap canvas{max-height:200px;}
+.zone-bar-item{padding:14px;border-radius:var(--radius);margin-bottom:10px;}
+.zone-bar-header{display:flex;justify-content:space-between;margin-bottom:8px;}
+.zone-bar-header h3{font-size:13px;font-weight:600;}
+.zone-pct{font-size:13px;font-weight:700;color:var(--teal-bright);}
+.progress{height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--teal),var(--teal-bright));border-radius:4px;transition:width 1s ease;}
+.zone-detail{font-size:11px;color:var(--text-muted);margin-top:6px;}
+.leaderboard{padding:4px;border-radius:var(--radius);}
+.lb-item{display:flex;align-items:center;gap:12px;padding:12px 14px;}
+.lb-rank{font-size:16px;font-weight:700;color:var(--text-muted);width:22px;text-align:center;}
+.lb-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-bright));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;}
+.lb-info{flex:1;}
+.lb-info h3{font-size:14px;font-weight:600;}
+.lb-info p{font-size:12px;color:var(--text-muted);}
+.lb-trophy{font-size:20px;}
+
+/* ===== SIDE MENU ===== */
+.side-menu{
+  position:fixed;top:0;left:-280px;width:280px;height:100%;z-index:300;
+  transition:left .3s ease;display:flex;flex-direction:column;
+  background:var(--glass-bg);backdrop-filter:blur(20px);
+  border-right:1px solid var(--glass-border);
+}
+.side-menu.open{left:0;}
+.overlay{
+  position:fixed;inset:0;z-index:299;background:rgba(0,0,0,0.5);
+  opacity:0;pointer-events:none;transition:opacity .3s;
+}
+.overlay.active{opacity:1;pointer-events:all;}
+.menu-profile{padding:20px 16px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--glass-border);}
+.menu-profile .user-avatar{width:48px;height:48px;font-size:16px;}
+.menu-profile h3{font-size:15px;font-weight:600;}
+.menu-profile p{font-size:12px;color:var(--text-muted);}
+.close-menu{
+  margin-left:auto;width:32px;height:32px;border:none;background:transparent;
+  color:var(--text-muted);cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;
+}
+.close-menu:hover{background:var(--teal-glow);color:var(--teal-bright);}
+.menu-nav{padding:12px 10px;flex:1;overflow-y:auto;}
+.menu-item{
+  display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;
+  border:none;background:transparent;color:var(--text-main);cursor:pointer;
+  font-family:'Lexend',sans-serif;font-size:14px;border-radius:var(--radius-sm);
+  transition:background .2s;margin-bottom:4px;
+}
+.menu-item:hover{background:var(--teal-glow);color:var(--teal-bright);}
+.menu-item svg{flex-shrink:0;opacity:.7;}
+.menu-divider{height:1px;background:var(--glass-border);margin:10px 0;}
+.menu-logout{color:var(--coral)!important;}
+
+/* ===== MODAL ===== */
+.modal-overlay{
+  position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.7);
+  display:none;align-items:flex-end;justify-content:center;
+}
+.modal-overlay.active{display:flex;}
+.modal{
+  width:100%;max-width:500px;border-radius:var(--radius) var(--radius) 0 0;
+  background:var(--ocean-mid);border:1px solid var(--glass-border);
+  padding:20px;max-height:80vh;overflow-y:auto;
+}
+.modal h2{font-size:17px;font-weight:600;margin-bottom:16px;}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:calc(var(--nav-h) + 12px);left:50%;transform:translateX(-50%) translateY(60px);
+  background:var(--success);color:#fff;padding:12px 20px;border-radius:30px;
+  font-size:14px;font-weight:500;opacity:0;transition:all .3s;z-index:1000;white-space:nowrap;
+}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+/* Leaflet overrides */
+.leaflet-control-attribution{display:none!important;}
+.leaflet-container{background:var(--ocean-mid);}
+
+@media(max-width:380px){
+  .stats-grid{grid-template-columns:1fr;}
+  .features-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="ocean-bg"></div>
+
+<!-- Theme Toggle -->
+<button class="theme-btn" onclick="toggleTheme()" title="Cambiar tema" id="theme-icon">🌙</button>
+
+<!-- SIDE MENU -->
+<div class="side-menu glass" id="side-menu">
+  <div class="menu-profile">
+    <div class="user-avatar">MR</div>
+    <div>
+      <h3>María Rodríguez</h3>
+      <p>Investigadora</p>
+    </div>
+    <button class="close-menu" onclick="toggleMenu()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <nav class="menu-nav">
+    <button class="menu-item" onclick="go('dashboard');toggleMenu();">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </button>
+    <button class="menu-item" onclick="go('data-entry');toggleMenu();">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Nueva Observación
+    </button>
+    <button class="menu-item" onclick="go('reports');toggleMenu();">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+      Reportes
+    </button>
+    <button class="menu-item" onclick="go('management');toggleMenu();">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m5.5-14.5l-3 3m-6 6l-3 3m14 0l-3-3m-6-6l-3-3"/></svg>
+      Gestión del Sistema
+    </button>
+    <div class="menu-divider"></div>
+    <button class="menu-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Mi Perfil
+    </button>
+    <button class="menu-item menu-logout" onclick="go('home');toggleMenu();">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Cerrar Sesión
+    </button>
+  </nav>
+</div>
+<div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+
+<!-- ===== HOME ===== -->
+<div class="screen active" id="home-screen">
+  <div class="scroll-area" style="display:flex;align-items:center;justify-content:center;">
+    <div class="home-content">
+      <div class="logo-wrap">
+        <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+          <circle cx="40" cy="40" r="38" stroke="#00c8e6" stroke-width="2" opacity=".4"/>
+          <path d="M40 10 C50 15,60 25,60 40 C60 55,50 65,40 70 C30 65,20 55,20 40 C20 25,30 15,40 10Z" fill="#00c8e6" opacity=".35"/>
+          <circle cx="40" cy="35" r="9" fill="#00c8e6"/>
+          <path d="M25 50 Q40 45,55 50" stroke="#00c8e6" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1 class="welcome-title">OceanLearn</h1>
+      <p class="welcome-sub">Explora y aprende sobre la vida marina</p>
+      <div class="features-grid">
+        <div class="feat-card glass">
+          <div class="feat-icon">🐠</div>
+          <h3>Especies Marinas</h3>
+          <p>Descubre miles de especies del océano</p>
+        </div>
+        <div class="feat-card glass">
+          <div class="feat-icon">📊</div>
+          <h3>Estadísticas</h3>
+          <p>Visualiza datos en tiempo real</p>
+        </div>
+        <div class="feat-card glass">
+          <div class="feat-icon">🔬</div>
+          <h3>Investigación</h3>
+          <p>Contribuye con observaciones</p>
+        </div>
+        <div class="feat-card glass">
+          <div class="feat-icon">🌊</div>
+          <h3>Conservación</h3>
+          <p>Protege nuestros océanos</p>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="go('auth')">Comenzar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== AUTH ===== -->
+<div class="screen" id="auth-screen">
+  <div class="scroll-area" style="display:flex;align-items:center;justify-content:center;">
+    <div class="auth-box">
+      <button class="back-btn" onclick="go('home')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        Volver
+      </button>
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchAuthTab('login')">Iniciar Sesión</button>
+        <button class="auth-tab" onclick="switchAuthTab('register')">Registrarse</button>
+      </div>
+      <form class="auth-form active" id="login-form" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label>Correo Electrónico</label>
+          <input type="email" class="form-input" placeholder="tu@email.com" required>
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input type="password" class="form-input" placeholder="••••••••" required>
+        </div>
+        <button class="btn-primary" type="submit">Ingresar</button>
+      </form>
+      <form class="auth-form" id="register-form" onsubmit="handleRegister(event)">
+        <div class="form-group">
+          <label>Nombre Completo</label>
+          <input type="text" class="form-input" placeholder="Tu nombre" required>
+        </div>
+        <div class="form-group">
+          <label>Correo Electrónico</label>
+          <input type="email" class="form-input" placeholder="tu@email.com" required>
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input type="password" class="form-input" placeholder="••••••••" required>
+        </div>
+        <div class="form-group">
+          <label>Rol</label>
+          <select class="form-input" required>
+            <option value="">Selecciona tu rol</option>
+            <option>Investigador</option>
+            <option>Estudiante</option>
+            <option>Educador</option>
+            <option>Entusiasta</option>
+          </select>
+        </div>
+        <button class="btn-primary" type="submit">Crear Cuenta</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DASHBOARD ===== -->
+<div class="screen" id="dashboard-screen">
+  <header class="app-header glass">
+    <button class="icon-btn" onclick="toggleMenu()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <span class="header-title">Dashboard</span>
+    <button class="icon-btn notif-badge">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    </button>
+  </header>
+  <div class="scroll-area with-header">
+    <div class="stats-grid">
+      <div class="stat-card glass"><div class="stat-emoji">🐟</div><div><div class="stat-val">1,234</div><div class="stat-lbl">Especies Registradas</div></div></div>
+      <div class="stat-card glass"><div class="stat-emoji">👥</div><div><div class="stat-val">856</div><div class="stat-lbl">Observadores Activos</div></div></div>
+      <div class="stat-card glass"><div class="stat-emoji">📍</div><div><div class="stat-val">3,492</div><div class="stat-lbl">Observaciones</div></div></div>
+      <div class="stat-card glass"><div class="stat-emoji">🌊</div><div><div class="stat-val">127</div><div class="stat-lbl">Zonas Monitoreadas</div></div></div>
+    </div>
+    <div class="sec-header"><h2>Actividad Reciente</h2></div>
+    <div class="activity-item glass">
+      <div class="activity-emoji">🐠</div>
+      <div>
+        <h3>Nueva especie registrada</h3>
+        <p>Pez Payaso identificado en la Zona 4</p>
+        <span class="activity-time">Hace 2 horas</span>
+      </div>
+    </div>
+    <div class="activity-item glass">
+      <div class="activity-emoji">🔬</div>
+      <div>
+        <h3>Análisis completado</h3>
+        <p>Reporte de calidad del agua disponible</p>
+        <span class="activity-time">Hace 5 horas</span>
+      </div>
+    </div>
+    <div class="activity-item glass">
+      <div class="activity-emoji">🌡️</div>
+      <div>
+        <h3>Alerta de temperatura</h3>
+        <p>Temperatura elevada en Zona 12</p>
+        <span class="activity-time">Hace 1 día</span>
+      </div>
+    </div>
+    <div class="sec-header"><h2>Acciones Rápidas</h2></div>
+    <div class="quick-actions">
+      <button class="quick-btn" onclick="go('data-entry')"><span class="quick-emoji">➕</span>Nueva Observación</button>
+      <button class="quick-btn" onclick="go('reports')"><span class="quick-emoji">📊</span>Ver Reportes</button>
+      <button class="quick-btn" onclick="go('management')"><span class="quick-emoji">⚙️</span>Gestión</button>
+    </div>
+  </div>
+  <nav class="bottom-nav glass">
+    <button class="nav-btn active" onclick="go('dashboard')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Inicio</span></button>
+    <button class="nav-btn" onclick="go('data-entry')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span>Agregar</span></button>
+    <button class="nav-btn" onclick="go('reports')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg><span>Reportes</span></button>
+    <button class="nav-btn" onclick="go('management')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m5.5-14.5l-3 3m-6 6l-3 3m14 0l-3-3m-6-6l-3-3"/></svg><span>Gestión</span></button>
+  </nav>
+</div>
+
+<!-- ===== DATA ENTRY ===== -->
+<div class="screen" id="data-entry-screen">
+  <header class="app-header glass">
+    <button class="icon-btn" onclick="go('dashboard')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <span class="header-title">Nueva Observación</span>
+    <div style="width:40px"></div>
+  </header>
+  <div class="scroll-area with-header">
+    <form id="obs-form" onsubmit="handleObservation(event)">
+      <!-- Especie -->
+      <div class="form-section glass">
+        <div class="form-section-title">🐠 Información de la Especie</div>
+        <div class="form-group">
+          <label>Especie *</label>
+          <select class="form-input" required>
+            <option value="">Selecciona una especie</option>
+            <option>Amphiprion ocellaris (Pez Payaso)</option>
+            <option>Carcharodon carcharias (Tiburón Blanco)</option>
+            <option>Octopus vulgaris (Pulpo Común)</option>
+            <option>Chelonia mydas (Tortuga Verde)</option>
+            <option>Hippocampus hippocampus (Caballito de Mar)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Cantidad de Especímenes *</label>
+          <input type="number" class="form-input" min="1" value="1" required>
+        </div>
+        <div class="form-group">
+          <label>Comportamiento Observado</label>
+          <select class="form-input">
+            <option value="">Selecciona un comportamiento</option>
+            <option>Alimentándose</option>
+            <option>En reposo</option>
+            <option>Nadando</option>
+            <option>Cazando</option>
+            <option>Reproduciéndose</option>
+            <option>Otro</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- UBICACIÓN con MAPA -->
+      <div class="form-section glass">
+        <div class="form-section-title">📍 Ubicación</div>
+        <div class="form-group">
+          <label>Zona de Monitoreo *</label>
+          <select class="form-input" id="zone-select-form" onchange="flyToZone(this.value)" required>
+            <option value="">Selecciona una zona</option>
+            <option value="A">Zona A - Arrecife Norte</option>
+            <option value="B">Zona B - Bahía Sur</option>
+            <option value="C">Zona C - Costa Este</option>
+          </select>
+        </div>
+
+        <!-- MAPA INTERACTIVO -->
+        <div class="form-group">
+          <label>Toca el mapa para seleccionar la ubicación exacta</label>
+          <div class="map-container">
+            <div class="map-label" id="map-hint">👆 Toca para marcar tu posición</div>
+            <div id="observation-map"></div>
+          </div>
+          <div class="map-coords">
+            <div class="coord-display">
+              <label>Latitud</label>
+              <span id="lat-display">—</span>
+            </div>
+            <div class="coord-display">
+              <label>Longitud</label>
+              <span id="lng-display">—</span>
+            </div>
+          </div>
+          <input type="hidden" id="obs-lat">
+          <input type="hidden" id="obs-lng">
+        </div>
+
+        <div class="form-group">
+          <label>Profundidad (metros)</label>
+          <input type="number" class="form-input" min="0" step="0.1" placeholder="15.5">
+        </div>
+      </div>
+
+      <!-- Condiciones Ambientales -->
+      <div class="form-section glass">
+        <div class="form-section-title">🌡️ Condiciones Ambientales</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Temperatura (°C)</label>
+            <input type="number" class="form-input" step="0.1" placeholder="24.5">
+          </div>
+          <div class="form-group">
+            <label>Salinidad (PSU)</label>
+            <input type="number" class="form-input" step="0.1" placeholder="35.0">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Visibilidad</label>
+          <select class="form-input">
+            <option value="">Selecciona visibilidad</option>
+            <option>Excelente (&gt;20m)</option>
+            <option>Buena (10-20m)</option>
+            <option>Moderada (5-10m)</option>
+            <option>Pobre (&lt;5m)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Estado del Agua</label>
+          <select class="form-input">
+            <option value="">Selecciona estado</option>
+            <option>Calmada</option>
+            <option>Moderada</option>
+            <option>Agitada</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Notas -->
+      <div class="form-section glass">
+        <div class="form-section-title">📝 Notas Adicionales</div>
+        <div class="form-group">
+          <label>Observaciones y Comentarios</label>
+          <textarea class="form-input" placeholder="Describe detalles adicionales..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Fotografía (opcional)</label>
+          <input type="file" class="file-input" accept="image/*">
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" onclick="resetObsForm()" style="margin-top:8px;">Limpiar</button>
+        <button type="submit" class="btn-primary" style="margin-top:0;">Guardar Observación</button>
+      </div>
+    </form>
+  </div>
+  <nav class="bottom-nav glass">
+    <button class="nav-btn" onclick="go('dashboard')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Inicio</span></button>
+    <button class="nav-btn active" onclick="go('data-entry')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span>Agregar</span></button>
+    <button class="nav-btn" onclick="go('reports')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg><span>Reportes</span></button>
+    <button class="nav-btn" onclick="go('management')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m5.5-14.5l-3 3m-6 6l-3 3m14 0l-3-3m-6-6l-3-3"/></svg><span>Gestión</span></button>
+  </nav>
+</div>
+
+<!-- ===== MANAGEMENT ===== -->
+<div class="screen" id="management-screen">
+  <header class="app-header glass">
+    <button class="icon-btn" onclick="toggleMenu()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <span class="header-title">Gestión del Sistema</span>
+    <div style="width:40px"></div>
+  </header>
+  <div class="scroll-area with-header">
+    <div class="mgmt-tabs">
+      <button class="tab-btn active" onclick="switchTab('especies')">Especies</button>
+      <button class="tab-btn" onclick="switchTab('zonas')">Zonas</button>
+      <button class="tab-btn" onclick="switchTab('usuarios')">Usuarios</button>
+    </div>
+
+    <!-- Especies -->
+    <div class="tab-panel active" id="tab-especies">
+      <div class="search-bar glass">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="search-input" placeholder="Buscar especies...">
+      </div>
+      <button class="btn-secondary btn-icon" onclick="showModal('add-species-modal')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Agregar Especie
+      </button>
+      <div class="data-item glass">
+        <div class="data-emoji">🐠</div>
+        <div class="data-info">
+          <h3>Amphiprion ocellaris</h3>
+          <p>Pez Payaso Común • 234 obs.</p>
+          <span class="status-pill pill-green">Activo</span>
+        </div>
+        <button class="edit-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+      </div>
+      <div class="data-item glass">
+        <div class="data-emoji">🦈</div>
+        <div class="data-info">
+          <h3>Carcharodon carcharias</h3>
+          <p>Tiburón Blanco • 89 obs.</p>
+          <span class="status-pill pill-green">Activo</span>
+        </div>
+        <button class="edit-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+      </div>
+      <div class="data-item glass">
+        <div class="data-emoji">🐙</div>
+        <div class="data-info">
+          <h3>Octopus vulgaris</h3>
+          <p>Pulpo Común • 156 obs.</p>
+          <span class="status-pill pill-green">Activo</span>
+        </div>
+        <button class="edit-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+      </div>
+      <div class="data-item glass">
+        <div class="data-emoji">🐢</div>
+        <div class="data-info">
+          <h3>Chelonia mydas</h3>
+          <p>Tortuga Verde • 342 obs.</p>
+          <span class="status-pill pill-red">En Peligro</span>
+        </div>
+        <button class="edit-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+      </div>
+    </div>
+
+    <!-- Zonas -->
+    <div class="tab-panel" id="tab-zonas">
+      <div class="search-bar glass">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="search-input" placeholder="Buscar zonas...">
+      </div>
+      <button class="btn-secondary btn-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Agregar Zona
+      </button>
+      <div class="data-item glass">
+        <div class="data-emoji">🌊</div>
+        <div class="data-info">
+          <h3>Zona A - Arrecife Norte</h3>
+          <p>Lat: 18.4655, Lng: -69.9312</p>
+          <span class="status-pill pill-green">Monitoreada</span>
+        </div>
+        <button class="edit-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+      </div>
+      <div class="data-item glass">
+        <div class="data-emoji">🏝️</div>
+        <div class="data-info">
+          <h3>Zona B - Bahía Sur</h3>
+          <p>Lat: 18.2333, Lng: -70.5167</p>
+          <span class="status-pill pill-green">Monitoreada</span>
+        </div>
+        <button class="edit-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+      </div>
+      <div class="data-item glass">
+        <div class="data-emoji">🌅</div>
+        <div class="data-info">
+          <h3>Zona C - Costa Este</h3>
+          <p>Lat: 19.1234, Lng: -69.3456</p>
+          <span class="status-pill pill-yellow">Revisión Pendiente</span>
+        </div>
+        <button class="edit-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+      </div>
+    </div>
+
+    <!-- Usuarios -->
+    <div class="tab-panel" id="tab-usuarios">
+      <div class="search-bar glass">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="search-input" placeholder="Buscar usuarios...">
+      </div>
+      <div class="data-item glass">
+        <div class="user-avatar">MR</div>
+        <div class="data-info">
+          <h3>María Rodríguez</h3>
+          <p>Investigadora • 145 obs.</p>
+          <span class="status-pill pill-green">Activo</span>
+        </div>
+        <button class="edit-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+      </div>
+      <div class="data-item glass">
+        <div class="user-avatar">JL</div>
+        <div class="data-info">
+          <h3>Juan López</h3>
+          <p>Estudiante • 87 obs.</p>
+          <span class="status-pill pill-green">Activo</span>
+        </div>
+        <button class="edit-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+      </div>
+      <div class="data-item glass">
+        <div class="user-avatar">AS</div>
+        <div class="data-info">
+          <h3>Ana Silva</h3>
+          <p>Educadora • 203 obs.</p>
+          <span class="status-pill pill-green">Activo</span>
+        </div>
+        <button class="edit-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+      </div>
+    </div>
+  </div>
+  <nav class="bottom-nav glass">
+    <button class="nav-btn" onclick="go('dashboard')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Inicio</span></button>
+    <button class="nav-btn" onclick="go('data-entry')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span>Agregar</span></button>
+    <button class="nav-btn" onclick="go('reports')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg><span>Reportes</span></button>
+    <button class="nav-btn active" onclick="go('management')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m5.5-14.5l-3 3m-6 6l-3 3m14 0l-3-3m-6-6l-3-3"/></svg><span>Gestión</span></button>
+  </nav>
+</div>
+
+<!-- ===== REPORTS ===== -->
+<div class="screen" id="reports-screen">
+  <header class="app-header glass">
+    <button class="icon-btn" onclick="toggleMenu()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <span class="header-title">Reportes y Estadísticas</span>
+    <div style="width:40px"></div>
+  </header>
+  <div class="scroll-area with-header">
+    <div class="filter-bar glass">
+      <select class="filter-select" onchange="updateCharts(this.value)">
+        <option value="week">Última semana</option>
+        <option value="month">Último mes</option>
+        <option value="quarter">Último trimestre</option>
+        <option value="year">Último año</option>
+        <option value="all">Todo el tiempo</option>
+      </select>
+    </div>
+    <div class="sec-header"><h2>Resumen General</h2></div>
+    <div class="stats-grid">
+      <div class="stat-card glass"><div class="stat-emoji">📈</div><div><div class="stat-val">+23%</div><div class="stat-lbl">Crecimiento</div></div></div>
+      <div class="stat-card glass"><div class="stat-emoji">🎯</div><div><div class="stat-val">94%</div><div class="stat-lbl">Precisión</div></div></div>
+    </div>
+    <div class="sec-header"><h2>Observaciones por Especie</h2></div>
+    <div class="chart-wrap glass"><canvas id="species-chart"></canvas></div>
+    <div class="sec-header"><h2>Tendencias Mensuales</h2></div>
+    <div class="chart-wrap glass"><canvas id="trends-chart"></canvas></div>
+    <div class="sec-header"><h2>Distribución por Zonas</h2></div>
+    <div class="zone-bar-item glass">
+      <div class="zone-bar-header"><h3>Zona A - Arrecife Norte</h3><span class="zone-pct">42%</span></div>
+      <div class="progress"><div class="progress-fill" style="width:42%"></div></div>
+      <p class="zone-detail">1,467 observaciones</p>
+    </div>
+    <div class="zone-bar-item glass">
+      <div class="zone-bar-header"><h3>Zona B - Bahía Sur</h3><span class="zone-pct">35%</span></div>
+      <div class="progress"><div class="progress-fill" style="width:35%"></div></div>
+      <p class="zone-detail">1,222 observaciones</p>
+    </div>
+    <div class="zone-bar-item glass">
+      <div class="zone-bar-header"><h3>Zona C - Costa Este</h3><span class="zone-pct">23%</span></div>
+      <div class="progress"><div class="progress-fill" style="width:23%"></div></div>
+      <p class="zone-detail">803 observaciones</p>
+    </div>
+    <div class="sec-header"><h2>Top Observadores</h2></div>
+    <div class="leaderboard glass">
+      <div class="lb-item"><div class="lb-rank">1</div><div class="lb-avatar">MR</div><div class="lb-info"><h3>María Rodríguez</h3><p>145 observaciones</p></div><div class="lb-trophy">🏆</div></div>
+      <div class="lb-item"><div class="lb-rank">2</div><div class="lb-avatar">AS</div><div class="lb-info"><h3>Ana Silva</h3><p>203 observaciones</p></div><div class="lb-trophy">🥈</div></div>
+      <div class="lb-item"><div class="lb-rank">3</div><div class="lb-avatar">JL</div><div class="lb-info"><h3>Juan López</h3><p>87 observaciones</p></div><div class="lb-trophy">🥉</div></div>
+    </div>
+    <button class="btn-primary btn-icon" onclick="showToast('Reporte exportado ✓')" style="margin-top:16px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Exportar Reporte
+    </button>
+  </div>
+  <nav class="bottom-nav glass">
+    <button class="nav-btn" onclick="go('dashboard')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Inicio</span></button>
+    <button class="nav-btn" onclick="go('data-entry')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span>Agregar</span></button>
+    <button class="nav-btn active" onclick="go('reports')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg><span>Reportes</span></button>
+    <button class="nav-btn" onclick="go('management')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m5.5-14.5l-3 3m-6 6l-3 3m14 0l-3-3m-6-6l-3-3"/></svg><span>Gestión</span></button>
+  </nav>
+</div>
+
+<!-- Modal Agregar Especie -->
+<div class="modal-overlay" id="add-species-modal">
+  <div class="modal glass">
+    <h2>Agregar Nueva Especie</h2>
+    <div class="form-group">
+      <label>Nombre Científico</label>
+      <input type="text" class="form-input" placeholder="Ej: Amphiprion ocellaris">
+    </div>
+    <div class="form-group">
+      <label>Nombre Común</label>
+      <input type="text" class="form-input" placeholder="Ej: Pez Payaso">
+    </div>
+    <div class="form-group">
+      <label>Estado</label>
+      <select class="form-input">
+        <option>Activo</option>
+        <option>En Peligro</option>
+        <option>Vulnerable</option>
+        <option>Extinto</option>
+      </select>
+    </div>
+    <div class="form-actions">
+      <button class="btn-secondary" onclick="hideModal('add-species-modal')">Cancelar</button>
+      <button class="btn-primary" onclick="hideModal('add-species-modal');showToast('Especie agregada ✓')">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== NAVIGATION =====
+const screens = ['home','auth','dashboard','data-entry','management','reports'];
+let obsMap = null, obsMarker = null;
+
+function go(name) {
+  screens.forEach(s => {
+    const el = document.getElementById(s+'-screen');
+    if(el) el.classList.toggle('active', s === name);
+  });
+  // Update active nav buttons
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  // Add active to the correct nav button in the active screen
+  const activeScreen = document.querySelector('.screen.active');
+  if (activeScreen) {
+    const navBtns = activeScreen.querySelectorAll('.nav-btn');
+    navBtns.forEach(btn => {
+      if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes("'" + name + "'")) {
+        btn.classList.add('active');
+      }
+    });
+  }
+  // Init map when entering data-entry
+  if(name === 'data-entry') {
+    setTimeout(initObsMap, 100);
+  }
+  // Init charts when entering reports
+  if(name === 'reports') {
+    setTimeout(initCharts, 100);
+  }
+}
+
+// ===== MENU =====
+function toggleMenu() {
+  document.getElementById('side-menu').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('active');
+}
+
+// ===== THEME =====
+let dark = true;
+function toggleTheme() {
+  dark = !dark;
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  document.getElementById('theme-icon').textContent = dark ? '🌙' : '☀️';
+}
+
+// ===== AUTH =====
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((b,i) => b.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='register')));
+  document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+  document.getElementById(tab+'-form').classList.add('active');
+}
+function handleLogin(e) { e.preventDefault(); go('dashboard'); showToast('¡Bienvenida, María! 👋'); }
+function handleRegister(e) { e.preventDefault(); go('dashboard'); showToast('Cuenta creada ✓'); }
+
+// ===== TABS MANAGEMENT =====
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().includes(name.substring(0,3))));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-'+name));
+}
+
+// ===== OBSERVATION MAP =====
+const ZONES = {
+  A: { lat: 18.4655, lng: -69.9312, name: 'Arrecife Norte' },
+  B: { lat: 18.2333, lng: -70.5167, name: 'Bahía Sur' },
+  C: { lat: 19.1234, lng: -69.3456, name: 'Costa Este' }
+};
+
+function initObsMap() {
+  if(obsMap) { obsMap.invalidateSize(); return; }
+  obsMap = L.map('observation-map', {
+    center: [18.5, -69.9],
+    zoom: 8,
+    zoomControl: true,
+    attributionControl: false
+  });
+
+  // Dark ocean tiles
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19
+  }).addTo(obsMap);
+
+  // Zone markers
+  Object.entries(ZONES).forEach(([key, z]) => {
+    const circle = L.circle([z.lat, z.lng], {
+      color: '#00c8e6', fillColor: '#00c8e6', fillOpacity: 0.15,
+      radius: 8000, weight: 2
+    }).addTo(obsMap).bindPopup(`<b>Zona ${key}</b><br>${z.name}`);
+  });
+
+  // Click to place marker
+  obsMap.on('click', function(e) {
+    const { lat, lng } = e.latlng;
+    placeMarker(lat, lng);
+  });
+}
+
+function placeMarker(lat, lng) {
+  const customIcon = L.divIcon({
+    className: '',
+    html: `<div style="background:#00c8e6;width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 12px rgba(0,200,230,0.7);"></div>`,
+    iconSize:[18,18], iconAnchor:[9,9]
+  });
+
+  if(obsMarker) obsMap.removeLayer(obsMarker);
+  obsMarker = L.marker([lat, lng], { icon: customIcon }).addTo(obsMap);
+
+  // Update displays
+  document.getElementById('lat-display').textContent = lat.toFixed(6);
+  document.getElementById('lng-display').textContent = lng.toFixed(6);
+  document.getElementById('obs-lat').value = lat.toFixed(6);
+  document.getElementById('obs-lng').value = lng.toFixed(6);
+  document.getElementById('map-hint').textContent = '📍 Ubicación seleccionada';
+}
+
+function flyToZone(key) {
+  if(!obsMap || !key) return;
+  const z = ZONES[key];
+  if(z) {
+    obsMap.flyTo([z.lat, z.lng], 11, { duration: 1 });
+    placeMarker(z.lat, z.lng);
+  }
+}
+
+function resetObsForm() {
+  document.getElementById('obs-form').reset();
+  if(obsMarker) { obsMap.removeLayer(obsMarker); obsMarker = null; }
+  document.getElementById('lat-display').textContent = '—';
+  document.getElementById('lng-display').textContent = '—';
+  document.getElementById('map-hint').textContent = '👆 Toca para marcar tu posición';
+}
+
+function handleObservation(e) {
+  e.preventDefault();
+  showToast('Observación guardada ✓ 🐠');
+  setTimeout(() => go('dashboard'), 1200);
+}
+
+// ===== CHARTS =====
+let speciesChart, trendsChart;
+function initCharts() {
+  const ctx1 = document.getElementById('species-chart');
+  const ctx2 = document.getElementById('trends-chart');
+  if(!ctx1 || !ctx2) return;
+
+  const chartDefaults = {
+    color: '#7eb3cc',
+    plugins: { legend: { labels: { color: '#7eb3cc', font: { family: 'Lexend' } } } },
+    scales: {
+      x: { ticks: { color:'#7eb3cc', font:{family:'Lexend'} }, grid: { color:'rgba(255,255,255,0.05)' } },
+      y: { ticks: { color:'#7eb3cc', font:{family:'Lexend'} }, grid: { color:'rgba(255,255,255,0.05)' } }
+    }
+  };
+
+  if(speciesChart) speciesChart.destroy();
+  speciesChart = new Chart(ctx1, {
+    type: 'doughnut',
+    data: {
+      labels: ['Pez Payaso','Tiburón Blanco','Pulpo','Tortuga Verde','Caballito'],
+      datasets: [{ data: [234,89,156,342,45], backgroundColor:['#00c8e6','#0099cc','#0066aa','#ff6b6b','#ffd166'], borderWidth:0 }]
+    },
+    options: { plugins: { legend: { labels: { color:'#7eb3cc', font:{family:'Lexend'} } } } }
+  });
+
+  if(trendsChart) trendsChart.destroy();
+  trendsChart = new Chart(ctx2, {
+    type: 'line',
+    data: {
+      labels: ['Ene','Feb','Mar','Abr','May','Jun'],
+      datasets: [{
+        label:'Observaciones',
+        data: [320,450,390,520,480,610],
+        borderColor:'#00c8e6', backgroundColor:'rgba(0,200,230,0.1)',
+        tension:0.4, fill:true, pointBackgroundColor:'#00c8e6'
+      }]
+    },
+    options: chartDefaults
+  });
+}
+function updateCharts(val) { /* could re-fetch data */ }
+
+// ===== MODAL =====
+function showModal(id) { document.getElementById(id).classList.add('active'); }
+function hideModal(id) { document.getElementById(id).classList.remove('active'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if(e.target === m) m.classList.remove('active'); });
+});
+
+// ===== TOAST =====
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
