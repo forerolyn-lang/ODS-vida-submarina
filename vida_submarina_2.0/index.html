@@ -398,10 +398,10 @@ textarea.form-input{resize:vertical;min-height:90px;}
 <!-- SIDE MENU -->
 <div class="side-menu glass" id="side-menu">
   <div class="menu-profile">
-    <div class="user-avatar">MR</div>
+    <div class="user-avatar" id="menu-avatar">?</div>
     <div>
-      <h3>María Rodríguez</h3>
-      <p>Investigadora</p>
+      <h3 id="menu-name">Usuario</h3>
+      <p id="menu-role">—</p>
     </div>
     <button class="close-menu" onclick="toggleMenu()">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -425,11 +425,11 @@ textarea.form-input{resize:vertical;min-height:90px;}
       Gestión del Sistema
     </button>
     <div class="menu-divider"></div>
-    <button class="menu-item">
+    <button class="menu-item" onclick="showProfileInfo();toggleMenu();">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       Mi Perfil
     </button>
-    <button class="menu-item menu-logout" onclick="go('home');toggleMenu();">
+    <button class="menu-item menu-logout" onclick="logout();toggleMenu();">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       Cerrar Sesión
     </button>
@@ -493,30 +493,30 @@ textarea.form-input{resize:vertical;min-height:90px;}
       <form class="auth-form active" id="login-form" onsubmit="handleLogin(event)">
         <div class="form-group">
           <label>Correo Electrónico</label>
-          <input type="email" class="form-input" placeholder="tu@email.com" required>
+          <input type="email" id="login-email" class="form-input" placeholder="tu@email.com" required>
         </div>
         <div class="form-group">
           <label>Contraseña</label>
-          <input type="password" class="form-input" placeholder="••••••••" required>
+          <input type="password" id="login-password" class="form-input" placeholder="••••••••" required>
         </div>
         <button class="btn-primary" type="submit">Ingresar</button>
       </form>
       <form class="auth-form" id="register-form" onsubmit="handleRegister(event)">
         <div class="form-group">
           <label>Nombre Completo</label>
-          <input type="text" class="form-input" placeholder="Tu nombre" required>
+          <input type="text" id="reg-name" class="form-input" placeholder="Tu nombre" required>
         </div>
         <div class="form-group">
           <label>Correo Electrónico</label>
-          <input type="email" class="form-input" placeholder="tu@email.com" required>
+          <input type="email" id="reg-email" class="form-input" placeholder="tu@email.com" required>
         </div>
         <div class="form-group">
           <label>Contraseña</label>
-          <input type="password" class="form-input" placeholder="••••••••" required>
+          <input type="password" id="reg-password" class="form-input" placeholder="••••••••" required>
         </div>
         <div class="form-group">
           <label>Rol</label>
-          <select class="form-input" required>
+          <select id="reg-role" class="form-input" required>
             <option value="">Selecciona tu rol</option>
             <option>Investigador</option>
             <option>Estudiante</option>
@@ -536,7 +536,7 @@ textarea.form-input{resize:vertical;min-height:90px;}
     <button class="icon-btn" onclick="toggleMenu()">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
-    <span class="header-title">Dashboard</span>
+    <span class="header-title" id="dashboard-greeting">Dashboard</span>
     <button class="icon-btn notif-badge">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
     </button>
@@ -743,9 +743,9 @@ textarea.form-input{resize:vertical;min-height:90px;}
   </header>
   <div class="scroll-area with-header">
     <div class="mgmt-tabs">
-      <button class="tab-btn active" onclick="switchTab('especies')">Especies</button>
-      <button class="tab-btn" onclick="switchTab('zonas')">Zonas</button>
-      <button class="tab-btn" onclick="switchTab('usuarios')">Usuarios</button>
+      <button class="tab-btn active" data-tab="especies" onclick="switchTab('especies')">Especies</button>
+      <button class="tab-btn" data-tab="zonas" onclick="switchTab('zonas')">Zonas</button>
+      <button class="tab-btn" data-tab="usuarios" onclick="switchTab('usuarios')">Usuarios</button>
     </div>
 
     <!-- Especies -->
@@ -802,7 +802,7 @@ textarea.form-input{resize:vertical;min-height:90px;}
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         <input class="search-input" placeholder="Buscar zonas...">
       </div>
-      <button class="btn-secondary btn-icon">
+      <button class="btn-secondary btn-icon" onclick="showToast('Función de agregar zona próximamente 🌊')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Agregar Zona
       </button>
@@ -973,35 +973,64 @@ textarea.form-input{resize:vertical;min-height:90px;}
 <div class="toast" id="toast"></div>
 
 <script>
+// ===== USER SESSION STATE =====
+// Simulates a simple in-memory auth system (no backend needed)
+let currentUser = null; // { name, email, role, initials }
+
+function setCurrentUser(user) {
+  currentUser = user;
+  updateUserUI();
+}
+
+function getInitials(name) {
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
+function updateUserUI() {
+  if (!currentUser) return;
+  const { name, role, initials } = currentUser;
+
+  // Side menu profile
+  const menuAvatar = document.getElementById('menu-avatar');
+  const menuName   = document.getElementById('menu-name');
+  const menuRole   = document.getElementById('menu-role');
+  if (menuAvatar) menuAvatar.textContent = initials;
+  if (menuName)   menuName.textContent   = name;
+  if (menuRole)   menuRole.textContent   = role;
+
+  // Dashboard greeting
+  const greeting = document.getElementById('dashboard-greeting');
+  if (greeting) {
+    const hour = new Date().getHours();
+    const saludo = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
+    const firstName = name.split(' ')[0];
+    greeting.textContent = `${saludo}, ${firstName} 👋`;
+  }
+}
+
 // ===== NAVIGATION =====
 const screens = ['home','auth','dashboard','data-entry','management','reports'];
 let obsMap = null, obsMarker = null;
 
 function go(name) {
+  // Show/hide screens
   screens.forEach(s => {
-    const el = document.getElementById(s+'-screen');
-    if(el) el.classList.toggle('active', s === name);
+    const el = document.getElementById(s + '-screen');
+    if (el) el.classList.toggle('active', s === name);
   });
-  // Update active nav buttons
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  // Add active to the correct nav button in the active screen
-  const activeScreen = document.querySelector('.screen.active');
-  if (activeScreen) {
-    const navBtns = activeScreen.querySelectorAll('.nav-btn');
-    navBtns.forEach(btn => {
-      if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes("'" + name + "'")) {
-        btn.classList.add('active');
-      }
-    });
-  }
-  // Init map when entering data-entry
-  if(name === 'data-entry') {
-    setTimeout(initObsMap, 100);
-  }
-  // Init charts when entering reports
-  if(name === 'reports') {
-    setTimeout(initCharts, 100);
-  }
+
+  // Update nav-btn active state: find all nav-btns globally that point to this screen
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    const oc = btn.getAttribute('onclick') || '';
+    btn.classList.toggle('active', oc.includes("go('" + name + "')"));
+  });
+
+  // Lazy init map
+  if (name === 'data-entry') setTimeout(initObsMap, 100);
+  // Lazy init charts
+  if (name === 'reports') setTimeout(initCharts, 150);
+  // Refresh user UI whenever we land on any authenticated screen
+  if (currentUser && name !== 'home' && name !== 'auth') updateUserUI();
 }
 
 // ===== MENU =====
@@ -1011,26 +1040,86 @@ function toggleMenu() {
 }
 
 // ===== THEME =====
+// CSS only defines [data-theme="light"] overrides; default (no attribute) = dark.
+// So we start without the attribute (dark) and add "light" when toggling.
 let dark = true;
 function toggleTheme() {
   dark = !dark;
-  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  if (dark) {
+    document.documentElement.removeAttribute('data-theme');
+  } else {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
   document.getElementById('theme-icon').textContent = dark ? '🌙' : '☀️';
 }
 
 // ===== AUTH =====
 function switchAuthTab(tab) {
-  document.querySelectorAll('.auth-tab').forEach((b,i) => b.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='register')));
+  document.querySelectorAll('.auth-tab').forEach((b, i) =>
+    b.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'register'))
+  );
   document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-  document.getElementById(tab+'-form').classList.add('active');
+  document.getElementById(tab + '-form').classList.add('active');
 }
-function handleLogin(e) { e.preventDefault(); go('dashboard'); showToast('¡Bienvenida, María! 👋'); }
-function handleRegister(e) { e.preventDefault(); go('dashboard'); showToast('Cuenta creada ✓'); }
 
-// ===== TABS MANAGEMENT =====
+function handleLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  // Derive a display name from the email local-part as a fallback
+  const localPart = email.split('@')[0];
+  const guessedName = localPart
+    .replace(/[._-]/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase());
+
+  setCurrentUser({
+    name: guessedName,
+    email: email,
+    role: 'Investigador',
+    initials: getInitials(guessedName)
+  });
+
+  go('dashboard');
+  showToast(`¡Bienvenido/a, ${guessedName.split(' ')[0]}! 👋`);
+}
+
+function handleRegister(e) {
+  e.preventDefault();
+  const name  = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const role  = document.getElementById('reg-role').value || 'Entusiasta';
+
+  setCurrentUser({
+    name: name,
+    email: email,
+    role: role,
+    initials: getInitials(name)
+  });
+
+  go('dashboard');
+  showToast(`¡Cuenta creada! Bienvenido/a, ${name.split(' ')[0]} ✓`);
+}
+
+function logout() {
+  currentUser = null;
+  go('home');
+  showToast('Sesión cerrada 👋');
+}
+
+function showProfileInfo() {
+  if (currentUser) {
+    showToast(`${currentUser.name} · ${currentUser.role}`);
+  }
+}
+
+// ===== MANAGEMENT TABS =====
 function switchTab(name) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().includes(name.substring(0,3))));
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-'+name));
+  // Use data-tab attribute for reliable matching (avoids substring collisions)
+  document.querySelectorAll('.tab-btn').forEach(b =>
+    b.classList.toggle('active', b.getAttribute('data-tab') === name)
+  );
+  document.querySelectorAll('.tab-panel').forEach(p =>
+    p.classList.toggle('active', p.id === 'tab-' + name)
+  );
 }
 
 // ===== OBSERVATION MAP =====
@@ -1041,7 +1130,7 @@ const ZONES = {
 };
 
 function initObsMap() {
-  if(obsMap) { obsMap.invalidateSize(); return; }
+  if (obsMap) { obsMap.invalidateSize(); return; }
   obsMap = L.map('observation-map', {
     center: [18.5, -69.9],
     zoom: 8,
@@ -1049,23 +1138,19 @@ function initObsMap() {
     attributionControl: false
   });
 
-  // Dark ocean tiles
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 19
   }).addTo(obsMap);
 
-  // Zone markers
   Object.entries(ZONES).forEach(([key, z]) => {
-    const circle = L.circle([z.lat, z.lng], {
+    L.circle([z.lat, z.lng], {
       color: '#00c8e6', fillColor: '#00c8e6', fillOpacity: 0.15,
       radius: 8000, weight: 2
     }).addTo(obsMap).bindPopup(`<b>Zona ${key}</b><br>${z.name}`);
   });
 
-  // Click to place marker
   obsMap.on('click', function(e) {
-    const { lat, lng } = e.latlng;
-    placeMarker(lat, lng);
+    placeMarker(e.latlng.lat, e.latlng.lng);
   });
 }
 
@@ -1073,13 +1158,12 @@ function placeMarker(lat, lng) {
   const customIcon = L.divIcon({
     className: '',
     html: `<div style="background:#00c8e6;width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 12px rgba(0,200,230,0.7);"></div>`,
-    iconSize:[18,18], iconAnchor:[9,9]
+    iconSize: [18, 18], iconAnchor: [9, 9]
   });
 
-  if(obsMarker) obsMap.removeLayer(obsMarker);
+  if (obsMarker) obsMap.removeLayer(obsMarker);
   obsMarker = L.marker([lat, lng], { icon: customIcon }).addTo(obsMap);
 
-  // Update displays
   document.getElementById('lat-display').textContent = lat.toFixed(6);
   document.getElementById('lng-display').textContent = lng.toFixed(6);
   document.getElementById('obs-lat').value = lat.toFixed(6);
@@ -1088,9 +1172,9 @@ function placeMarker(lat, lng) {
 }
 
 function flyToZone(key) {
-  if(!obsMap || !key) return;
+  if (!obsMap || !key) return;
   const z = ZONES[key];
-  if(z) {
+  if (z) {
     obsMap.flyTo([z.lat, z.lng], 11, { duration: 1 });
     placeMarker(z.lat, z.lng);
   }
@@ -1098,7 +1182,7 @@ function flyToZone(key) {
 
 function resetObsForm() {
   document.getElementById('obs-form').reset();
-  if(obsMarker) { obsMap.removeLayer(obsMarker); obsMarker = null; }
+  if (obsMarker) { obsMap.removeLayer(obsMarker); obsMarker = null; }
   document.getElementById('lat-display').textContent = '—';
   document.getElementById('lng-display').textContent = '—';
   document.getElementById('map-hint').textContent = '👆 Toca para marcar tu posición';
@@ -1115,49 +1199,60 @@ let speciesChart, trendsChart;
 function initCharts() {
   const ctx1 = document.getElementById('species-chart');
   const ctx2 = document.getElementById('trends-chart');
-  if(!ctx1 || !ctx2) return;
+  if (!ctx1 || !ctx2) return;
+
+  const isDark = dark;
+  const tickColor = isDark ? '#7eb3cc' : '#1a5a7a';
+  const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,80,130,0.08)';
 
   const chartDefaults = {
-    color: '#7eb3cc',
-    plugins: { legend: { labels: { color: '#7eb3cc', font: { family: 'Lexend' } } } },
+    plugins: { legend: { labels: { color: tickColor, font: { family: 'Lexend' } } } },
     scales: {
-      x: { ticks: { color:'#7eb3cc', font:{family:'Lexend'} }, grid: { color:'rgba(255,255,255,0.05)' } },
-      y: { ticks: { color:'#7eb3cc', font:{family:'Lexend'} }, grid: { color:'rgba(255,255,255,0.05)' } }
+      x: { ticks: { color: tickColor, font: { family: 'Lexend' } }, grid: { color: gridColor } },
+      y: { ticks: { color: tickColor, font: { family: 'Lexend' } }, grid: { color: gridColor } }
     }
   };
 
-  if(speciesChart) speciesChart.destroy();
+  if (speciesChart) speciesChart.destroy();
   speciesChart = new Chart(ctx1, {
     type: 'doughnut',
     data: {
-      labels: ['Pez Payaso','Tiburón Blanco','Pulpo','Tortuga Verde','Caballito'],
-      datasets: [{ data: [234,89,156,342,45], backgroundColor:['#00c8e6','#0099cc','#0066aa','#ff6b6b','#ffd166'], borderWidth:0 }]
+      labels: ['Pez Payaso', 'Tiburón Blanco', 'Pulpo', 'Tortuga Verde', 'Caballito'],
+      datasets: [{
+        data: [234, 89, 156, 342, 45],
+        backgroundColor: ['#00c8e6', '#0099cc', '#0066aa', '#ff6b6b', '#ffd166'],
+        borderWidth: 0
+      }]
     },
-    options: { plugins: { legend: { labels: { color:'#7eb3cc', font:{family:'Lexend'} } } } }
+    options: { plugins: { legend: { labels: { color: tickColor, font: { family: 'Lexend' } } } } }
   });
 
-  if(trendsChart) trendsChart.destroy();
+  if (trendsChart) trendsChart.destroy();
   trendsChart = new Chart(ctx2, {
     type: 'line',
     data: {
-      labels: ['Ene','Feb','Mar','Abr','May','Jun'],
+      labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
       datasets: [{
-        label:'Observaciones',
-        data: [320,450,390,520,480,610],
-        borderColor:'#00c8e6', backgroundColor:'rgba(0,200,230,0.1)',
-        tension:0.4, fill:true, pointBackgroundColor:'#00c8e6'
+        label: 'Observaciones',
+        data: [320, 450, 390, 520, 480, 610],
+        borderColor: '#00c8e6', backgroundColor: 'rgba(0,200,230,0.1)',
+        tension: 0.4, fill: true, pointBackgroundColor: '#00c8e6'
       }]
     },
     options: chartDefaults
   });
 }
-function updateCharts(val) { /* could re-fetch data */ }
+
+function updateCharts(val) {
+  // Could re-fetch data by period; for now just re-render
+  if (speciesChart || trendsChart) initCharts();
+}
 
 // ===== MODAL =====
 function showModal(id) { document.getElementById(id).classList.add('active'); }
 function hideModal(id) { document.getElementById(id).classList.remove('active'); }
 document.querySelectorAll('.modal-overlay').forEach(m => {
-  m.addEventListener('click', e => { if(e.target === m) m.classList.remove('active'); });
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); });
 });
 
 // ===== TOAST =====
@@ -1165,7 +1260,7 @@ function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
+  setTimeout(() => t.classList.remove('show'), 2800);
 }
 </script>
 </body>
